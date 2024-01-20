@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Caches
+*.idea/
+*.vscode/
+*.pyc
+
+# Environment variables
+.env
+
+# Database
+db.sqlite3
+*.sqlite3
+
+# Logs
+*.log
+
+# Secret key
+*.secret_key
+
+# Virtual environment
+venv/
+env/
+
+# Static files
+static/
+
+# Media files
+media/
+
+# IDE specific files
+*.pycharm/
+*.vscode/
+
+# Compiled Python files
+*.pyc
+
+# Translation files
+*.mo
+*.pot
+
+# Django migration files
+**/migrations/*.py
+**/migrations/*.pyc
