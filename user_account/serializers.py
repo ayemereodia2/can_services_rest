@@ -2,6 +2,7 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from rest_framework.authtoken.models import Token
 
+from allauth.account.models import EmailAddress
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -11,11 +12,22 @@ class UserSerializer(serializers.ModelSerializer):
         extra_kwargs = {'password': {'write_only': True}}
 
     def create(self, validated_data):
-        user = User(
-            email=validated_data['email'],
-            username=validated_data['email']
+        email = validated_data['email']
+        username = validated_data.get('username', email)
+
+        user = User.objects.create(
+            email=email,
+            username=username,
         )
         user.set_password(validated_data['password'])
         user.save()
-        Token.objects.get(user=user)
+
+        # Send email verification
+        EmailAddress.objects.create(
+            user=user,
+            email=email,
+            primary=True,
+            verified=False  # The email address is initially set as unverified
+        )
+
         return user
