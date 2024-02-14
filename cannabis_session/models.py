@@ -1,5 +1,5 @@
 from django.db import models
-from django.contrib.auth.models import User
+from user_account.models import CustomUser
 from stash_manager.models import Stash
 
 # Create your models here.
@@ -11,7 +11,7 @@ class UserConsumptionSession(models.Model):
     session_state = models.CharField(max_length = 50)
     added_item_to_stash = models.BooleanField()
     stash_id = models.CharField(max_length = 50)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now=True)
     
     
@@ -43,7 +43,7 @@ class UserActivitySession(models.Model):
     activity_duration = models.CharField(max_length = 50)
     activity_state = models.CharField(max_length = 50)
     activity_item = models.ForeignKey(Activity, on_delete=models.CASCADE)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now=True)
     
 class SessionFeedBack(models.Model):
@@ -56,7 +56,7 @@ class SessionFeedBack(models.Model):
 class UserCompleteSession(models.Model):
     consumption_by = models.OneToOneField(UserConsumptionSession, on_delete=models.CASCADE)
     activity_by = models.OneToOneField(UserActivitySession, on_delete=models.CASCADE)
-    created_by = models.ForeignKey(User, on_delete=models.CASCADE)
+    created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     feedback = models.OneToOneField(SessionFeedBack, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now=True)
     

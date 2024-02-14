@@ -21,6 +21,8 @@ from allauth.account import app_settings as allauth_settings
 from django.contrib.auth import get_user_model
 from allauth.socialaccount.models import SocialAccount
 
+from can_backend.utils import Utils
+from .serializers import CustomUser
 
 
 # from rest_framework_simplejwt.views import TokenObtainPairView
@@ -30,25 +32,34 @@ from .serializers import UserSerializer
 
 class UserCreate(APIView):
     def post(self, request, *args, **kwargs):
-        serializer_class = UserSerializer(data= request.data)
+        serializer_class = UserSerializer(data=request.data)
+
         data = {}
         
         if serializer_class.is_valid():
-            account = serializer_class.save()
+            email = serializer_class.validated_data['email']
+            password = serializer_class.validated_data['password']
+            
+            if GoogleTokenValidator.check_user_email_exists(email):
+                data['response'] = 'user account already exist'
+                return Response(data, status=status.HTTP_201_CREATED)
+            
+                
+            user = CustomUser.objects.create_user_with_otp(email= email, password=password)
             data['response'] = 'user account created'
-            data['username'] = account.email
+            data['username'] = user.email
             return Response(data, status=status.HTTP_201_CREATED)
         data = serializer_class.errors
         return Response(data, status=status.HTTP_400_BAD_REQUEST)
     
     
     def get(self, request, *args, **kwargs):
-        users = User.objects.all()
+        users = CustomUser.objects.all()
         serializer = UserSerializer(users, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
     
     def get_user_by_identifier(self, identifier):
-        user = get_object_or_404(User, Q(username=identifier) | Q(email=identifier))
+        user = get_object_or_404(CustomUser, Q(username=identifier) | Q(email=identifier))
         serializer = UserSerializer(user)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
@@ -59,16 +70,57 @@ class UserCreate(APIView):
 class LoginView(ObtainAuthToken):
 
     def post(self, request, *args, **kwargs):
-        serializer = self.serializer_class(data=request.data,
+        serializer = UserSerializer(data=request.data,
                                            context={'request': request})
         serializer.is_valid(raise_exception=True)
-        user = serializer.validated_data['user']
-        token, created = Token.objects.get_or_create(user=user)
-        return Response({
-            'token': token.key,
-            'user_id': user.pk,
-            'email': user.email
-        })
+        
+        email = serializer.validated_data['email']
+        user = GoogleTokenValidator.get_user_with(email=email)
+        
+        if user.is_active:
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({
+                'token': token.key,
+                'user_id': user.pk,
+                'email': user.email
+            })
+        else:
+            return Response({'message': f'{user.email} is not a verified email address' })
+
+class VerifyOTPView(APIView):
+
+    def post(self, request, *args, **kwargs):
+        email = request.data.get('email')
+        otp = request.data.get('otp')
+        user = GoogleTokenValidator.get_user_with(email=email)
+
+        if user:
+            if user.otp == otp and user.is_active == False:
+                return self.update_user_property(user=user,new_value= True)
+            else:
+                return Response({'message': 'Invalid OTP'}, status=status.HTTP_400_BAD_REQUEST)
+        else:
+            return Response({'message': 'Empty Body or User not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+    def update_user_property(self, user, new_value):
+        try:
+            # Retrieve the user object from the database
+            if user:
+                # Update the specified property
+                setattr(user, 'is_active', new_value)
+                # Save the user object to persist the changes
+                user.save()
+                token, created = Token.objects.get_or_create(user=user)
+                return Response({
+                    'token': token.key,
+                    'user_id': user.pk,
+                    'email': user.email
+                }, status=status.HTTP_200_OK)
+                
+            else:
+                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+        except Exception as e:
+            return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
    
 class GoogleTokenValidator(APIView):
@@ -142,34 +194,13 @@ class GoogleTokenValidator(APIView):
         
     @staticmethod
     def check_user_email_exists(email):
-        return User.objects.filter(email=email).exists()
-            
-        
-        
-        
-# class UserActivationView(APIView):
-#     def get(self, request, uid, token):
-#         protocol = "https://" if request.is_secure() else "http://"
-#         web_url = protocol + request.get_host()
-#         uid = request.args["uid"]
-#         uid = request.args["token"]
-#         post_url = web_url + "/auth/activation/"
-#         post_data = {"uid": uid, "token": token}
-#         result = requests.post(post_url, data=post_data)
-#         content = result.text
-#         return Response(content)
+        return CustomUser.objects.filter(email=email).exists()
     
-
-# login_serializer = self.get_serializer(data=request.data)
-#             if login_serializer.is_valid():
-#                 user_serializer = UserRegistrationSerializer(user)
-#                 return Response(
-#                     {
-#                         "access": login_serializer.validated_data["access"],
-#                         "refresh": login_serializer.validated_data["refresh"],
-#                         "user": user_serializer.data,
-#                         "message": "Login successful",
-#                     },
-#                     status=status.HTTP_200_OK,
-#                 )
-
+    @staticmethod
+    def check_user_email_verified(email):
+        return CustomUser.objects.filter(email=email).is_active
+    
+    @staticmethod
+    def get_user_with(email):
+        return CustomUser.objects.filter(email=email).first()
+            
