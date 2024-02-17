@@ -8,7 +8,7 @@ class UserConsumptionSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserConsumptionSession
         fields = ('id', 'session_duration', 'session_quantity', 'session_state', 'added_item_to_stash',
-                  'stash_item', 'created_by', 'emotion', 'pub_date')
+                  'stash_id', 'created_by', 'emotion_id', 'pub_date')
 
 class SessionFeedBackSerializer(serializers.ModelSerializer):
     class Meta:
@@ -28,14 +28,14 @@ class UserActivitySessionSerializer(serializers.ModelSerializer):
 class UserCompleteSessionSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserCompleteSession
-        fields = ['consumption_by', 'activity_by', 'reviews', 'created_by', 'pub_date']
+        fields = ['consumption_by', 'activity_by', 'feedback', 'created_by', 'pub_date']
         
 class EmotionSerializer(serializers.ModelSerializer):
     class Meta:
         model = Emotion
-        fields = '__all__'
+        fields = ('id', 'emotion_name', 'emotion_icon_id')
         
 class SubEmotionSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubEmotion
-        fields = '__all__'
+        fields = ('id', 'sub_emotion_name', 'emotion_icon_id', 'main_emotions')

@@ -7,27 +7,72 @@ from rest_framework import generics
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status
-from .models import UserConsumptionSession, UserCompleteSession, UserActivitySession, Activity
-from .serializers import UserConsumptionSessionSerializer, UserCompleteSessionSerializer, UserActivitySessionSerializer, ActivitySerializer, SessionFeedBackSerializer
+from .models import UserConsumptionSession, UserCompleteSession, UserActivitySession, Activity, Emotion, Stash, SubEmotion
+from .serializers import UserConsumptionSessionSerializer, UserCompleteSessionSerializer, UserActivitySessionSerializer, ActivitySerializer, SessionFeedBackSerializer,SubEmotionSerializer
 from django.shortcuts import get_object_or_404
 from django.http import Http404
+from django.db import DatabaseError
+from .serializers import EmotionSerializer
+from .models import Emotion
+from rest_framework.exceptions import APIException
+
 
 class UserConsumptionSessionView(APIView):
-
-    permission_classes = [permissions.IsAuthenticated]
-
     def post(self, request, format=None):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
+        
         serializer = UserConsumptionSessionSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        try:
+            if serializer.is_valid():
+                # Check if emotion_id and stash_id are present in request data
+                if 'emotion_id' not in serializer.validated_data or 'stash_id' not in serializer.validated_data:
+                    data = {
+                        "response": "emotion_id and stash_id are required fields"
+                    }
+                    return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+                # Fetch emotion and stash objects using the provided IDs
+                emotion_id = serializer.validated_data['emotion_id']
+                stash_id = serializer.validated_data['stash_id']
+                emotion = Emotion.objects.filter(id=emotion_id).first()
+                stash = Stash.objects.filter(id=stash_id).first()
+
+                # Check if both emotion and stash exist
+                if emotion and stash: 
+                    # Assign the authenticated user to the created_by field
+                    serializer.validated_data['emotion_id'] = emotion.id
+                    serializer.validated_data['stash_id'] = stash.id
+                    #serializer.validated_data['created_by'] = request.user
+                    serializer.save(created_by=request.user)
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                else:
+                    data = {
+                        "response": "emotion or stash items do not exist"
+                    }
+                    print("got here", serializer.errors)
+                    return Response(data, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                data = {
+                    "response": "error serializing request"
+                }
+                print(serializer.errors)
+                return Response(data, status=status.HTTP_400_BAD_REQUEST)
+        except DatabaseError:
+            data = {
+                "response": "Database error occurred"
+            }
+            return Response(data, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+   
     
     def perform_create(self, serializer):
         # Override this method to tie the user to the created item
         serializer.save(created_by=self.request.user)
 
     def get(self, request, session_id=None, format=None):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
+        
         try:
             if session_id:
                 session = get_object_or_404(UserConsumptionSession, id=session_id, created_by=request.user)
@@ -52,6 +97,9 @@ class UserActivitySessionView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, format=None):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
+        
         serializer = UserActivitySessionSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
@@ -66,6 +114,9 @@ class UserActivitySessionView(APIView):
         serializer.save(created_by=self.request.user, activity_item = activity_item)
 
     def get(self, request, session_id=None, format=None):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
+        
         try:
             if session_id:
                 session = get_object_or_404(UserActivitySession, id=session_id, created_by=request.user)
@@ -102,9 +153,11 @@ class UserActivitySessionView(APIView):
 
 
 class UserCompleteSessionView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
     
     def get(self, request, format=None):
+        if not request.user.is_authenticated:
+            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
+        
         user_complete_sessions = UserCompleteSession.objects.filter(created_by=request.user)
         serializer = UserCompleteSessionSerializer(user_complete_sessions, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -115,24 +168,29 @@ class UserCompleteSessionView(APIView):
         return Response(serializer.data)
 
     def post(self, request, format=None):
-        # Extract feedback data from request
-        feedback_data = request.data.pop('feedback', None)
+        try:
+            if not request.user.is_authenticated:
+                raise APIException('Authentication credentials were not provided.', status_code=status.HTTP_401_UNAUTHORIZED)
+            
+            # Create a SessionFeedBack object from the request data
+            feedback_serializer = SessionFeedBackSerializer(data=request.data.get('feedback'))
+            if not feedback_serializer.is_valid():
+                raise APIException(feedback_serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+            
+            feedback = feedback_serializer.save()
 
-        # Create UserCompleteSession instance
-        user_complete_session_serializer = UserCompleteSessionSerializer(data=request.data)
-        if user_complete_session_serializer.is_valid():
-            user_complete_session = user_complete_session_serializer.save(created_by=request.user)
-
-            # Create SessionFeedBack instance with the reference to UserCompleteSession
-            if feedback_data:
-                feedback_data['session'] = user_complete_session.id
-                feedback_serializer = SessionFeedBackSerializer(data=feedback_data)
-                if feedback_serializer.is_valid():
-                    feedback_serializer.save()
-
+            # Create a UserCompleteSession object and assign the feedback's pk
+            complete_session_data = request.data.copy()
+            complete_session_data['feedback'] = feedback.pk
+            user_complete_session_serializer = UserCompleteSessionSerializer(data=complete_session_data)
+            if not user_complete_session_serializer.is_valid():
+                raise APIException(user_complete_session_serializer.errors, status_code=status.HTTP_400_BAD_REQUEST)
+            
+            user_complete_session_serializer.save(created_by=request.user)
             return Response(user_complete_session_serializer.data, status=status.HTTP_201_CREATED)
         
-        return Response(user_complete_session_serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except DatabaseError:
+            raise APIException('A database error occurred.', status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
     
     def perform_create(self, serializer):
         serializer.save(created_by=self.request.user)
@@ -147,8 +205,7 @@ class UserCompleteSessionView(APIView):
 class ActivityListView(generics.ListCreateAPIView):
     queryset = Activity.objects.all()
     serializer_class = ActivitySerializer
-    permission_classes = [permissions.IsAuthenticated]
-
+    
     def post(self, request, *args, **kwargs):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
@@ -158,3 +215,32 @@ class ActivityListView(generics.ListCreateAPIView):
 
     def perform_create(self, serializer):
         serializer.save()  # 
+        
+
+
+class EmotionListView(APIView):
+    def get(self, request, format=None):
+        emotions = Emotion.objects.all()
+        serializer = EmotionSerializer(emotions, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, format=None):
+        serializer = EmotionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+
+class SubEmotionListView(APIView):
+    def get(self, request, format=None):
+        sub_emotions = SubEmotion.objects.all()
+        serializer = SubEmotionSerializer(sub_emotions, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, format=None):
+        serializer = SubEmotionSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

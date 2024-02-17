@@ -18,3 +18,15 @@ class UserSerializer(serializers.Serializer):
             return data
         else:
             raise serializers.ValidationError("Both email and password are required.")
+        
+
+class EmailSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+    
+    def validate(self, data):
+        email = data.get('email')
+        
+        if email:
+            return data
+        else:
+            raise serializers.ValidationError("Invalid email address")

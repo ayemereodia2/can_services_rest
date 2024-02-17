@@ -4,7 +4,7 @@ from user_account.models import CustomUser
 # Create your models here.
 
 class Stash(models.Model):
-    stash_name = models.CharField(max_length = 100)
+    stash_name = models.CharField(max_length = 120)
     thc = models.CharField(max_length = 50)
     cbd = models.CharField(max_length = 50)
     indica = models.CharField(max_length = 50)

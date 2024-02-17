@@ -20,9 +20,9 @@ from allauth.account.utils import complete_signup
 from allauth.account import app_settings as allauth_settings
 from django.contrib.auth import get_user_model
 from allauth.socialaccount.models import SocialAccount
-
+import random
 from can_backend.utils import Utils
-from .serializers import CustomUser
+from .serializers import CustomUser, EmailSerializer
 
 
 # from rest_framework_simplejwt.views import TokenObtainPairView
@@ -52,19 +52,34 @@ class UserCreate(APIView):
         data = serializer_class.errors
         return Response(data, status=status.HTTP_400_BAD_REQUEST)
     
-    
-    def get(self, request, *args, **kwargs):
-        users = CustomUser.objects.all()
-        serializer = UserSerializer(users, many=True)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-    
-    def get_user_by_identifier(self, identifier):
-        user = get_object_or_404(CustomUser, Q(username=identifier) | Q(email=identifier))
-        serializer = UserSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+class ResendOTP(APIView):
+    def post(self, request, *args, **kwargs):
+        serializer = EmailSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data['email']
+            user = GoogleTokenValidator.get_user_with(email)
 
-    def get_by_identifier(self, request, identifier, *args, **kwargs):
-        return self.get_user_by_identifier(identifier)
+            if user:
+                otp = self.generate_otp()
+                self.update_user_otp(user, otp)
+                self.send_otp_email(email, otp)
+                return Response({'response': 'OTP sent'}, status=status.HTTP_201_CREATED)
+            else:
+                return Response({'response': 'User account does not exist'}, status=status.HTTP_404_NOT_FOUND)
+
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def generate_otp(self):
+        return ''.join(random.choices('0123456789', k=6))
+
+    def update_user_otp(self, user, otp):
+        user.otp = otp
+        user.save()
+
+    def send_otp_email(self, email, otp):
+        email_body = f'Hi there, you are trying to use the Qway App!\nPlease use the following One Time Password (OTP) to verify your email address:\n\n{otp}'
+        data = {'subject': 'Verify your email address', 'email_body': email_body, 'recipient': email}
+        Utils.send_email(data)
 
 
 class LoginView(ObtainAuthToken):
