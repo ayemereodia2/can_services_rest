@@ -1,5 +1,5 @@
 from django.urls import path
-from user_account.views import UserCreate, LoginView, GoogleTokenValidator, VerifyOTPView, ResendOTP
+from user_account.views import UserCreate, LoginView, GoogleTokenValidator, VerifyOTPView, ResendOTP, AppleLoginView
 
 # urlpatterns = [
 #     path('register/', UserRegistrationView.as_view(), name='register'),
@@ -11,5 +11,6 @@ urlpatterns = [
     path("token-auth/", LoginView.as_view()),
     path("verify-auth", VerifyOTPView.as_view()),
     path("google-token/", GoogleTokenValidator.as_view()),
-    path("resend-otp", ResendOTP.as_view())
+    path("resend-otp", ResendOTP.as_view()),
+    path("apple-token/", AppleLoginView.as_view())
 ]

@@ -25,6 +25,12 @@ from can_backend.utils import Utils
 from .serializers import CustomUser, EmailSerializer
 
 
+from allauth.account import app_settings as allauth_settings
+from allauth.socialaccount.helpers import complete_social_login
+from allauth.socialaccount.models import SocialApp, SocialAccount, SocialLogin
+from allauth.socialaccount.providers.apple.provider import AppleProvider
+
+
 # from rest_framework_simplejwt.views import TokenObtainPairView
 # from rest_framework_simplejwt.tokens import RefreshToken
 # import requests
@@ -37,20 +43,24 @@ class UserCreate(APIView):
         data = {}
         
         if serializer_class.is_valid():
-            email = serializer_class.validated_data['email']
-            password = serializer_class.validated_data['password']
+            email = serializer_class.validated_data['email'].strip().lower()
+            password = serializer_class.validated_data['password'].strip().lower()
             
             if GoogleTokenValidator.check_user_email_exists(email):
                 data['response'] = 'user account already exist'
+                data['username'] = user.email
                 return Response(data, status=status.HTTP_201_CREATED)
             
                 
             user = CustomUser.objects.create_user_with_otp(email= email, password=password)
-            data['response'] = 'user account created'
+            data['response'] = 'Please, verify the OTP sent to your email'
             data['username'] = user.email
             return Response(data, status=status.HTTP_201_CREATED)
         data = serializer_class.errors
         return Response(data, status=status.HTTP_400_BAD_REQUEST)
+    
+
+
     
 class ResendOTP(APIView):
     def post(self, request, *args, **kwargs):
@@ -89,18 +99,25 @@ class LoginView(ObtainAuthToken):
                                            context={'request': request})
         serializer.is_valid(raise_exception=True)
         
-        email = serializer.validated_data['email']
-        user = GoogleTokenValidator.get_user_with(email=email)
+        email = serializer.validated_data['email'].strip().lower()
         
+        user = GoogleTokenValidator.get_user_with(email=email)
+        print("e dey", user)
         if user.is_active:
             token, created = Token.objects.get_or_create(user=user)
             return Response({
                 'token': token.key,
                 'user_id': user.pk,
-                'email': user.email
-            })
+                'email': user.email,
+                'response': 'success'
+            }, status=status.HTTP_200_OK)
         else:
-            return Response({'message': f'{user.email} is not a verified email address' })
+            return Response({
+                'token': "",
+                'user_id': 0,
+                'email': "",
+                'response': 'unverified'
+            }, status=status.HTTP_204_NO_CONTENT)
 
 class VerifyOTPView(APIView):
 
@@ -129,13 +146,18 @@ class VerifyOTPView(APIView):
                 return Response({
                     'token': token.key,
                     'user_id': user.pk,
-                    'email': user.email
+                    'email': user.email,
+                    'response': 'success'
                 }, status=status.HTTP_200_OK)
                 
             else:
-                return Response({'message': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'token': '',
+                                 'user_id': '',
+                                 'email': '',
+                                 'response': 'User not found',
+                                 }, status=status.HTTP_404_NOT_FOUND)
         except Exception as e:
-            return Response({'message': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({'response': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
    
 class GoogleTokenValidator(APIView):
@@ -156,15 +178,22 @@ class GoogleTokenValidator(APIView):
             if userid:
                 #check if user exit in database
                     if GoogleTokenValidator.check_user_email_exists(email):
-                        return Response({"user_state": "user already exits"}, status=status.HTTP_200_OK)
+                        token, created = Token.objects.get_or_create(user=user)
+
+                        return Response({
+                            'token': token.key,
+                            'user_id': user.pk,
+                            'email': user.email,
+                            'response': 'success'
+                        }, status=status.HTTP_200_OK)
                     else:
-                        user_payload = {"email": email, "username": email, "password": "pop"}
+                        user_payload = {"email": email, "password": "pop"}
                 # creat new user
                        # Create a new user without password
                     user = get_user_model().objects.filter(email=email).first()
                     if not user:
                         # Create a new user without password
-                        user = get_user_model().objects.create(email=email, username=email)
+                        user = get_user_model().objects.create(email=email)
 
                     # Ensure the user is marked as verified
                     email_address, created = EmailAddress.objects.get_or_create(
@@ -196,16 +225,27 @@ class GoogleTokenValidator(APIView):
                         complete_signup(
                             request, user, allauth_settings.EMAIL_VERIFICATION, None
                         )
-
-                    return Response({"user_state": "user created successfully"}, status=status.HTTP_201_CREATED)
-                                
+                        token, created = Token.objects.get_or_create(user=user)
+                        return Response({
+                            'token': token.key,
+                            'user_id': user.pk,
+                            'email': user.email,
+                            'response': 'success'
+                        }, status=status.HTTP_201_CREATED)
+                        
+                    token, created = Token.objects.get_or_create(user=user)
+                    return Response({
+                        'token': token.key,
+                        'user_id': user.pk,
+                        'email': user.email,
+                        'response': 'success'
+                    }, status=status.HTTP_201_CREATED)                                
             else:
-                 return Response({"error": "An error occurred"}, status=status.HTTP_400_BAD_REQUEST)
+                 return Response({"response": "An error occurred"}, status=status.HTTP_400_BAD_REQUEST)
             
         except ValueError as e:
             # Invalid token
-            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        
+            return Response({"response": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         
     @staticmethod
     def check_user_email_exists(email):
@@ -218,4 +258,53 @@ class GoogleTokenValidator(APIView):
     @staticmethod
     def get_user_with(email):
         return CustomUser.objects.filter(email=email).first()
+        
+
+class AppleLoginView(APIView):
+    def post(self, request, *args, **kwargs):
+        # Get the Apple ID token from the request
+        apple_id_token = request.data.get('apple_id_token')
+
+        # Verify the Apple ID token
+        provider = AppleProvider(request)
+        data = provider.verify_apple_id_token(apple_id_token)
+        print("got it", data, apple_id_token)
+        # Get the user's Apple ID and email address
+        user_id = data['sub']
+        email = data['email']
+        
+        print("got it", user_id, email)
+        # Check if the user already exists
+        user = CustomUser.objects.filter(email=email).first()
+
+        if user:
+            # If the user exists, update their email address
+            user.email = email
+            user.save()
+            token, created = Token.objects.get_or_create(user=user)
+            return Response({
+            'token': token.key,
+            'user_id': user.pk,
+            'email': user.email
+        }, status=status.HTTP_201_CREATED)
+        else:
+            # If the user doesn't exist, create a new user
+            user = CustomUser.objects.create_user(email=email, apple_user_id=user_id)
+
+        # Create a social account for the user
+        social_app = SocialApp.objects.get(provider='apple')
+        social_account = SocialAccount.objects.create(user=user, provider='apple', uid=user_id, extra_data={'email': email})
+        social_login = SocialLogin(user=user, account=social_account)
+        complete_social_login(request, social_login)
+
+        token, created = Token.objects.get_or_create(user=user)
+        print("got it", user_id, email)
+        return Response({
+            'token': token.key,
+            'user_id': user.pk,
+            'email': user.email
+        }, status=status.HTTP_201_CREATED)
+        # Return a success response
+        #return Response({'message': 'User authenticated successfully'}, status=200)
+
             

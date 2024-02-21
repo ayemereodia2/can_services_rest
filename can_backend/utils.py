@@ -8,7 +8,7 @@ class Utils:
     def send_email(data):
         subject = data['subject']
         body = data['email_body']
-        recepient = data['recipient']
+        recepient = data['recepient']
         send_mail(
                 subject,
                 body,
