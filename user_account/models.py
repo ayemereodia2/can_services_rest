@@ -84,7 +84,6 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     otp = models.CharField(max_length=6, blank=True, null=True)
     is_biometric_enabled = models.BooleanField(default=False)
 
-
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
 

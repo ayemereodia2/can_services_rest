@@ -52,7 +52,7 @@ INSTALLED_APPS = [
     'allauth.account',
     'allauth.socialaccount',
     
-    'allauth.socialaccount.providers.facebook',
+    'allauth.socialaccount.providers.apple',
     'allauth.socialaccount.providers.google',
 
 
@@ -189,8 +189,26 @@ SOCIALACCOUNT_PROVIDERS = {
             'secret': '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',
             'key': ''
         }
-    }
+    },
+    'apple': {
+        'APP': {
+            "client_id": 'com.ayemere.apps.qway.mobile2',   
+            "secret": 'X252ADAV8L',
+            "key": 'LB5YMG5W6W',
+            "settings": {
+                "certificate_key": """-----BEGIN PRIVATE KEY-----
+MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgxKL83j8ismmx40ET
+jaDgW54iESL0erDrLzb2W1Cm0fOgCgYIKoZIzj0DAQehRANCAAQN50r4UOAxHt/4
+fkKbxKeLK0lPU8blrUTvKJdZ9dyf4WF/c/SlHP0TMN2zb7OwL7lvQkmsmXY1PqMa
+Y2LpROed
+-----END PRIVATE KEY-----"""
+            }
+        }
+    } 
+    
 }
+# 
+# LB5YMG5W6W.com.ayemere.apps.qway.mobile
 
 CORS_ORIGIN_WHITELIST = (
     "http://localhost:3000",
