@@ -7,14 +7,18 @@ from rest_framework.response import Response
 from rest_framework import status
 from .models import Stash
 from .serializers import StashSerializer
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework import exceptions
+
 
 class StashView(APIView):
 
+    authentication_classes = [TokenAuthentication]
+    # permission_classes = [IsAuthenticated]
+        
     def get(self, request, format=None):
-        
-        if not request.user.is_authenticated:
-            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
-        
+        print("who",request)
         try:
             stashes = Stash.objects.filter(created_by=request.user)
             serializer = StashSerializer(stashes, many=True)
@@ -48,3 +52,4 @@ class StashView(APIView):
 
         stash.delete()
         return Response("deleted successfully", status=status.HTTP_204_NO_CONTENT)
+    

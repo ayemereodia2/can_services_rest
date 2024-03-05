@@ -183,7 +183,7 @@ class GoogleTokenValidator(APIView):
                                 'token': None,
                                 'user_id': 0,
                                 'email': None,
-                                'response': 'unverified'
+                                'response': 'user already exist'
                         }, status=status.HTTP_200_OK) 
                     else:
                         print("user-load2")
