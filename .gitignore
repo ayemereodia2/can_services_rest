@@ -23,8 +23,8 @@ db.sqlite3
 *.secret_key
 
 # Virtual environment
-venv/
-env/
+#venv/
+#env/
 
 # Static files
 static/
