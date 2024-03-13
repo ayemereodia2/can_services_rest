@@ -12,6 +12,7 @@ class UserConsumptionSession(models.Model):
     added_item_to_stash = models.BooleanField()
     stash_id = models.CharField(max_length = 50)
     emotion_id = models.CharField(max_length = 50)
+    emotion_subset_id = models.CharField(max_length = 50)
     created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now=True)
     
@@ -19,6 +20,8 @@ class UserConsumptionSession(models.Model):
 class Emotion(models.Model):
     emotion_name = models.CharField(max_length = 50)
     emotion_icon_id = models.CharField(max_length = 100)
+    colorHex = models.CharField(max_length = 10)
+    sub_emotions = []
     #user_consumption_session = models.ForeignKey(UserConsumptionSession, on_delete=models.CASCADE)
 
     def __str__(self):
@@ -28,6 +31,7 @@ class Emotion(models.Model):
 class SubEmotion(models.Model):
     sub_emotion_name = models.CharField(max_length = 50)
     emotion_icon_id = models.CharField(max_length = 100)
+    colorHex = models.CharField(max_length = 10)
     main_emotions = models.ForeignKey(Emotion, on_delete=models.CASCADE)
     
     def __str__(self):
