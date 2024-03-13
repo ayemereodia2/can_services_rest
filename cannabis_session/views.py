@@ -10,6 +10,7 @@ from rest_framework import status
 from .models import UserConsumptionSession, UserCompleteSession, UserActivitySession, Activity, Emotion, Stash, SubEmotion
 from .serializers import UserConsumptionSessionSerializer, UserCompleteSessionSerializer, UserActivitySessionSerializer, ActivitySerializer, SessionFeedBackSerializer,SubEmotionSerializer
 from django.shortcuts import get_object_or_404
+from rest_framework.authentication import TokenAuthentication
 from django.http import Http404
 from django.db import DatabaseError
 from .serializers import EmotionSerializer
@@ -18,9 +19,9 @@ from rest_framework.exceptions import APIException
 
 
 class UserConsumptionSessionView(APIView):
+    authentication_classes = [TokenAuthentication]
+
     def post(self, request, format=None):
-        if not request.user.is_authenticated:
-            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
         
         serializer = UserConsumptionSessionSerializer(data=request.data)
         try:
@@ -70,8 +71,6 @@ class UserConsumptionSessionView(APIView):
         serializer.save(created_by=self.request.user)
 
     def get(self, request, session_id=None, format=None):
-        if not request.user.is_authenticated:
-            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
         
         try:
             if session_id:
@@ -94,11 +93,9 @@ class UserConsumptionSessionView(APIView):
         
 class UserActivitySessionView(APIView):
 
-    permission_classes = [permissions.IsAuthenticated]
+    authentication_classes = [TokenAuthentication]
 
     def post(self, request, format=None):
-        if not request.user.is_authenticated:
-            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
         
         serializer = UserActivitySessionSerializer(data=request.data)
         if serializer.is_valid():
@@ -114,8 +111,6 @@ class UserActivitySessionView(APIView):
         serializer.save(created_by=self.request.user, activity_item = activity_item)
 
     def get(self, request, session_id=None, format=None):
-        if not request.user.is_authenticated:
-            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
         
         try:
             if session_id:
@@ -153,10 +148,9 @@ class UserActivitySessionView(APIView):
 
 
 class UserCompleteSessionView(APIView):
-    
+    authentication_classes = [TokenAuthentication]
+
     def get(self, request, format=None):
-        if not request.user.is_authenticated:
-            return Response({"detail": "Authentication credentials were not provided."}, status=status.HTTP_401_UNAUTHORIZED)
         
         user_complete_sessions = UserCompleteSession.objects.filter(created_by=request.user)
         serializer = UserCompleteSessionSerializer(user_complete_sessions, many=True)
@@ -203,6 +197,7 @@ class UserCompleteSessionView(APIView):
 
 
 class ActivityListView(generics.ListCreateAPIView):
+    
     queryset = Activity.objects.all()
     serializer_class = ActivitySerializer
     
@@ -219,9 +214,17 @@ class ActivityListView(generics.ListCreateAPIView):
 
 
 class EmotionListView(APIView):
-    def get(self, request, format=None):
+    def get(self, request):
         emotions = Emotion.objects.all()
         serializer = EmotionSerializer(emotions, many=True)
+        
+        for emotion_data in serializer.data:
+            emotion_id = emotion_data['id']
+            sub_emotions = SubEmotion.objects.filter(main_emotions_id=emotion_id)
+            serialized_sub_emotions = SubEmotionSerializer(sub_emotions, many=True)
+            emotion_data['sub_emotions'] = serialized_sub_emotions.data
+        
+        print(serializer.data)
         return Response(serializer.data)
 
     def post(self, request, format=None):

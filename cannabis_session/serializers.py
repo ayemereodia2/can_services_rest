@@ -30,12 +30,16 @@ class UserCompleteSessionSerializer(serializers.ModelSerializer):
         model = UserCompleteSession
         fields = ['consumption_by', 'activity_by', 'feedback', 'created_by', 'pub_date']
         
-class EmotionSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Emotion
-        fields = ('id', 'emotion_name', 'emotion_icon_id')
-        
+
 class SubEmotionSerializer(serializers.ModelSerializer):
     class Meta:
         model = SubEmotion
-        fields = ('id', 'sub_emotion_name', 'emotion_icon_id', 'main_emotions')
+        fields = ('id', 'sub_emotion_name', 'emotion_icon_id','colorHex', 'main_emotions')
+
+class EmotionSerializer(serializers.ModelSerializer):
+    sub_emotions = SubEmotionSerializer(many=True, read_only=True)
+
+
+    class Meta:
+        model = Emotion
+        fields = ('id', 'emotion_name', 'emotion_icon_id', 'colorHex', 'sub_emotions')

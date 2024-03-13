@@ -14,6 +14,6 @@ urlpatterns = [
     
     path('activities/', ActivityListView.as_view(), name='activity-list'),
     path('emotions', EmotionListView.as_view()),
-    path('sub-emotions', SubEmotionListView.as_view()),
+    # path('sub-emotions', SubEmotionListView.as_view()),
     # Add other URLs as needed
 ]

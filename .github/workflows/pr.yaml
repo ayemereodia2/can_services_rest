@@ -1,0 +1,7 @@
+# name: Quality Assurance
+# on: [pull_request, workflow_call]
+
+# job: 
+#     quality-assurance:
+#         name: Quality Assurance
+#         runs-on: ubuntu-latest

@@ -179,12 +179,15 @@ class GoogleTokenValidator(APIView):
             if userid:
                 #check if user exit in database
                     if GoogleTokenValidator.check_user_email_exists(email):
+                        user = GoogleTokenValidator.get_user_with(email=email)
+                        token, created = Token.objects.get_or_create(user=user)
+                        print("user-load3", user)
                         return Response({
-                                'token': None,
-                                'user_id': 0,
-                                'email': None,
-                                'response': 'user already exist'
-                        }, status=status.HTTP_200_OK) 
+                            'token': token.key,
+                            'user_id': user.pk,
+                            'email': user.email,
+                            'response': 'success'
+                        }, status=status.HTTP_201_CREATED) 
                     else:
                         print("user-load2")
                         user_payload = {"email": email, "password": "pop", "is_active": True}
@@ -348,12 +351,14 @@ class AppleLoginView(APIView):
                     # If the user exists, update their email address
                     user.email = email
                     user.save()
+                    token, created = Token.objects.get_or_create(user=user)
+                
                     return Response({
-                'token': None,
-                'user_id': 0,
-                'email': None,
-                'response': 'unverified'
-            }, status=status.HTTP_200_OK)
+                    'token': token.key,
+                    'user_id': user.pk,
+                    'email': user.email,
+                    'response': 'success'
+                }, status=status.HTTP_201_CREATED)
                 else:
                     # If the user doesn't exist, create a new user
                     user = CustomUser.objects.create_user(email=email,password="", is_active=True)

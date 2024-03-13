@@ -12,7 +12,7 @@ class Stash(models.Model):
     strain_flavour = models.CharField(max_length = 100)
     consumption_method =  models.CharField(max_length = 100)
     total_quantity =  models.CharField(max_length = 50)
-    stash_image_id =  models.CharField(max_length = 100)
+    stash_image_id =  models.CharField(max_length = 155)
     created_date = models.DateTimeField(auto_now=True)
     
     created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
