@@ -44,5 +44,5 @@ media/
 *.pot
 
 # Django migration files
-**/migrations/*.py
-**/migrations/*.pyc
+# **/migrations/*.py
+# **/migrations/*.pyc
