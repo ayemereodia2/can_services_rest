@@ -111,7 +111,7 @@ WSGI_APPLICATION = 'can_backend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'canna_db_store',
+        'NAME': 'app_database',
         'USER': 'postgres',
         'PASSWORD': 'Swift9471@@',
         'HOST': 'localhost',
