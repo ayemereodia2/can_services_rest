@@ -6,15 +6,18 @@ from stash_manager.models import Stash
 
     
 class UserConsumptionSession(models.Model):
-    session_duration = models.CharField(max_length = 50)
-    session_quantity = models.CharField(max_length = 50)
-    session_state = models.CharField(max_length = 50)
+    session_duration = models.CharField(max_length=50)
+    session_quantity = models.CharField(max_length=50)
+    session_state = models.CharField(max_length=50)
     added_item_to_stash = models.BooleanField()
-    stash_id = models.CharField(max_length = 50)
-    emotion_id = models.CharField(max_length = 50)
-    emotion_subset_id = models.CharField(max_length = 50)
+    stash = models.OneToOneField(Stash, on_delete=models.CASCADE, related_name='consumption_session')
+    emotion_id = models.CharField(max_length=50)
+    emotion_subset_id = models.CharField(max_length=50)
     created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"UserConsumptionSession {self.pk}"
     
     
 class Emotion(models.Model):
@@ -47,7 +50,7 @@ class Activity(models.Model):
 class UserActivitySession(models.Model):
     activity_duration = models.CharField(max_length = 50)
     activity_state = models.CharField(max_length = 50)
-    activity_item = models.ForeignKey(Activity, on_delete=models.CASCADE)
+    activity = models.OneToOneField(Activity, on_delete=models.CASCADE, related_name='user_activity_session')
     created_by = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     pub_date = models.DateTimeField(auto_now=True)
     
