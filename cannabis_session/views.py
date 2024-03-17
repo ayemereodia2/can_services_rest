@@ -16,6 +16,7 @@ from django.db import DatabaseError
 from .serializers import EmotionSerializer
 from .models import Emotion
 from rest_framework.exceptions import APIException
+from stash_manager.serializers import StashSerializer
 
 
 class UserConsumptionSessionView(APIView):
@@ -80,6 +81,11 @@ class UserConsumptionSessionView(APIView):
             else:
                 sessions = UserConsumptionSession.objects.filter(created_by=request.user)
                 serializer = UserConsumptionSessionSerializer(sessions, many=True)
+                for session_data in serializer.data:
+                    stash_id = session_data['stash_id']
+                    stash_instance = Stash.objects.get(id=stash_id)  # Get the Stash object using stash_id
+                    stash_serializer = StashSerializer(stash_instance)  # Serialize the Stash object
+                    session_data['stash'] = stash_serializer.data
                 return Response(serializer.data)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
