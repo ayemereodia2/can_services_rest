@@ -14,7 +14,5 @@ steps:
     sudo apt-get install python3-pip -y     
     source venv/bin/activate
     pip install -r requirements.txt  # Install project dependencies
+    python3 -m pytest -vv
   displayName: 'Install dependencies and run tests'
-- name: Test with pytest
-        working-directory: ./tests
-        run: python3 -m pytest -vv
