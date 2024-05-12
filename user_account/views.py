@@ -41,8 +41,8 @@ class UserCreate(APIView):
             password = serializer_class.validated_data['password'].strip().lower()
             
             if GoogleTokenValidator.check_user_email_exists(email):
-                data['response'] = 'user account already exist'
-                data['username'] = user.email
+                data['response'] = 'Please, verify the OTP sent to your email'
+                data['username'] = email
                 return Response(data, status=status.HTTP_201_CREATED)
             
                 

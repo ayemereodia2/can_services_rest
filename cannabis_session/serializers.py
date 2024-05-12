@@ -23,9 +23,10 @@ class ActivitySerializer(serializers.ModelSerializer):
         fields = ['id', 'activity_name', 'activity_icon_id']
         
 class UserActivitySessionSerializer(serializers.ModelSerializer):
+    #activity = ActivitySerializer()
     class Meta:
         model = UserActivitySession
-        fields = '__all__'
+        fields = ('id', 'activity_duration', 'activity_state', 'activity', 'created_by', 'pub_date')
         
 class UserCompleteSessionSerializer(serializers.ModelSerializer):
     class Meta:

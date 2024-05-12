@@ -102,12 +102,30 @@ class UserActivitySessionView(APIView):
     authentication_classes = [TokenAuthentication]
 
     def post(self, request, format=None):
-        
         serializer = UserActivitySessionSerializer(data=request.data)
+        
+        
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # Check if 'activity' is present in request data
+            if 'activity' not in serializer.validated_data:
+                data = {
+                    "response": "activity is required field"
+                }
+                return Response(data, status=status.HTTP_400_BAD_REQUEST)
+
+            # Fetch activity object using the provided ID
+            activity = serializer.validated_data['activity']
+            activity_objc = Activity.objects.filter(id=activity.id).first()
+
+            # Check if activity exists
+            if activity: 
+                # Assign the authenticated user to the 'created_by' field
+                serializer.validated_data['activity'] = activity
+                serializer.save(created_by=request.user)
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     
     def perform_create(self, serializer):
         # Override this method to tie the user to the created item
@@ -126,6 +144,12 @@ class UserActivitySessionView(APIView):
             else:
                 sessions = UserActivitySession.objects.filter(created_by=request.user)
                 serializer = UserActivitySessionSerializer(sessions, many=True)
+                for session_data in serializer.data: 
+                    activity_id = session_data['activity']
+                    activity_instance = Activity.objects.get(id=activity_id)  # Get the activity object using activity_id
+                    activity_serializer = ActivitySerializer(activity_instance)  # Serialize the activity object
+                    session_data['activity'] = activity_serializer.data
+                    
                 return Response(serializer.data)
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
