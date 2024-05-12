@@ -1,4 +1,4 @@
-#!/Volumes/ExtraHD/PERSONAL_Projects/Canna_Api/can_services_rest/env/bin/python3.12
+#!/Volumes/ExtraHD/PERSONAL_Projects/Canna_Api/can_services_rest/env/bin/python3.11
 # -*- coding: utf-8 -*-
 import re
 import sys
