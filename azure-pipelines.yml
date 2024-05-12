@@ -11,8 +11,7 @@ pool:
 
 steps:
 - script: |
-    sudo apt-get install python3-pip -y  
-    python3 -m venv env   
+    sudo apt-get install python3-pip -y     
     source venv/bin/activate
     pip install -r requirements.txt  # Install project dependencies
     python3 manage.py test  # Run Django tests
