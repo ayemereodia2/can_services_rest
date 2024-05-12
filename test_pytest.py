@@ -6,3 +6,6 @@ def test_increment():
 # test designed to fail for demo purposes
 def test_decrement():
     assert inc_dec.decrement(3) == 2
+
+def test_print():
+    print('Getting there!')
