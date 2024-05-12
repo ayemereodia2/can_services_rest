@@ -1,0 +1,19 @@
+# Starter pipeline
+# Start with a minimal pipeline that you can customize to build and deploy your code.
+# Add steps that build, run tests, deploy, and more:
+# https://aka.ms/yaml
+
+trigger:
+- main  # Define the branch to trigger the pipeline
+
+pool:
+  vmImage: 'ubuntu-latest'  # Define the operating system for the pipeline
+
+steps:
+- script: |
+    sudo apt-get install python3-pip -y  
+    python3 -m venv env   
+    source venv/bin/activate
+    pip install -r requirements.txt  # Install project dependencies
+    python3 manage.py test  # Run Django tests
+  displayName: 'Install dependencies and run tests'
