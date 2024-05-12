@@ -2,13 +2,15 @@
 from rest_framework import serializers
 from .models import UserConsumptionSession,SessionFeedBack, Activity, UserActivitySession, UserCompleteSession
 from .models import Emotion, SubEmotion
+from stash_manager.serializers import StashSerializer
 
 
 class UserConsumptionSessionSerializer(serializers.ModelSerializer):
+    stash = StashSerializer()  # Nested serializer for the stash object
     class Meta:
         model = UserConsumptionSession
         fields = ('id', 'session_duration', 'session_quantity', 'session_state', 'added_item_to_stash',
-                  'stash_id', 'created_by', 'emotion_id', 'pub_date')
+                  'stash', 'created_by', 'emotion_id', 'pub_date')
 
 class SessionFeedBackSerializer(serializers.ModelSerializer):
     class Meta:
@@ -21,9 +23,10 @@ class ActivitySerializer(serializers.ModelSerializer):
         fields = ['id', 'activity_name', 'activity_icon_id']
         
 class UserActivitySessionSerializer(serializers.ModelSerializer):
+    #activity = ActivitySerializer()
     class Meta:
         model = UserActivitySession
-        fields = '__all__'
+        fields = ('id', 'activity_duration', 'activity_state', 'activity', 'created_by', 'pub_date')
         
 class UserCompleteSessionSerializer(serializers.ModelSerializer):
     class Meta:
